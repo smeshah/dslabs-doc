@@ -41,7 +41,9 @@ Class RaftCommo (commo.cc) is meant to handle sending RPC requests.
 
 #### Example of sync RPC
 
-- using sync rpc
+- using sync rpc \
+    \
+    `server.cc` 
     ```
     Coroutine::CreateRun([this](){
 
@@ -63,7 +65,7 @@ Class RaftCommo (commo.cc) is meant to handle sending RPC requests.
         }
     });
     ```
-
+    `commo.cc` 
     ```
     shared_ptr<IntEvent> 
     RaftCommo::SendString(parid_t par_id, siteid_t site_id, const string& msg, string* res) {
@@ -90,7 +92,9 @@ Class RaftCommo (commo.cc) is meant to handle sending RPC requests.
 - Using async operation
 
 
-    The QuorumEvent feature in the framework allows us to make asynchronous calls to multiple servers. It collects responses from these servers and stores them. The main advantage is that once a majority of responses are received, it doesn't have to wait for the rest, which is particularly useful during leader elections.
+    The QuorumEvent feature in the framework allows us to make asynchronous calls to multiple servers. It collects responses from these servers and stores them. The main advantage is that once a majority of responses are received, it doesn't have to wait for the rest, which is particularly useful during leader elections. \
+    \
+    `server.cc`
 
     ```
     Coroutine::CreateRun([this](){
@@ -122,6 +126,8 @@ Class RaftCommo (commo.cc) is meant to handle sending RPC requests.
     });
 
     ```
+    `commo.h`
+
     ```
     class Reply{
         public:
@@ -150,7 +156,7 @@ Class RaftCommo (commo.cc) is meant to handle sending RPC requests.
         }
     };
     ```
-
+    `commo.cc`
     ```
     shared_ptr<ReplyQuorumEvent> 
     RaftCommo::SendRequestVote(parid_t par_id,
