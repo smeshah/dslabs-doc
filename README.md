@@ -100,29 +100,25 @@ Class RaftCommo (commo.cc) is meant to handle sending RPC requests.
     Coroutine::CreateRun([this](){
 
         while(true){
-            for (int server_id = 0; server_id < NO_OF_SERVERS; server_id++){
-                if (server_id == loc_id_)
-                    continue;
-                else{
-                    string res;
-                    auto event = commo()->SendRequestVote(0, site_id_, request_params, response_params);
-                    event->Wait(1000000);
-                    if (event->status_ == Event::TIMEOUT) {
-                        Log_info("failed to connect from server %d", site_id_);
-                        continue;
-                    }
-                    // process replies
-                    for (auto reply : event->replies){
-                        Log_info("Processing reply");
-                        Log_info("reply.ret %u", reply.ret);
-                    }
-
-                    if (event->Yes()) {
-                        currentState="leader";
-                    } 
-                }
+          
+            auto event = commo()->SendRequestVote(0, site_id_, request_params, response_params);
+            event->Wait(1000000);
+            if (event->status_ == Event::TIMEOUT) {
+                Log_info("failed to connect from server %d", site_id_);
+                continue;
             }
+            // process replies
+            for (auto reply : event->replies){
+                Log_info("Processing reply");
+                Log_info("reply.ret %u", reply.ret);
+            }
+
+            if (event->Yes()) {
+                currentState="leader";
+            } 
         }
+    
+        
     });
 
     ```
