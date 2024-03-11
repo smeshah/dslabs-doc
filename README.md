@@ -2,16 +2,16 @@
 
 
 ## Table of Contents
-- [Overview](#overview)
-- [Coroutines](#coroutines-in-raft)
-- [Events](#events-overview)
-- [RPCs](#rpcs-in-raft)
+- [Overview](#1-overview)
+- [Coroutines](#2-coroutines-in-raft)
+- [Events](#3-events-overview)
+- [RPCs](#4-rpcs-in-raft)
 
-## 1. Overview
+## 1 Overview
 
 This README explores the integration of coroutines and RPCs within a Raft consensus algorithm implementation using the labs framework.  Coroutines provide a structured approach to managing asynchronous operations like network communication and leader election, enhancing code readability and maintainability. RPCs form the backbone of communication within the distributed Raft cluster, enabling nodes to send requests and receive responses efficiently. This document outlines how these concepts are leveraged within the labs framework and provides insights into their effective usage for implementing distributed systems
 
-## 2. Coroutines in Raft
+## 2 Coroutines in Raft
 
 Coroutines are lightweight functions that allow pausing and resuming execution at specific points, unlike traditional functions that run to completion in a single go.
 
@@ -60,7 +60,7 @@ Coroutine::CreateRun([this](){
 - Synchronization: When multiple coroutines interact, ensure you have mechanisms to prevent race conditions and data inconsistencies.
 - Error Handling: Implement robust error handling and recovery within coroutines since they might encounter timeouts, network issues, etc.
 
-## 3. Events Overview
+## 3 Events Overview
 
 - Event system provides a mechanism for coordinating actions or notifications within an application.
 
@@ -108,7 +108,7 @@ if (myEvent->status_ == READY) {
         - Returns `false` if the value meets the condition before the timeout, `true` if a timeout occurs.
     
 
-## 4. RPCs in Raft
+## 4 RPCs in Raft
 
 Remote Procedure Calls (RPCs) are the primary communication mechanism within a Raft cluster. They are used for:
 - Leader Election: Nodes send `RequestVote` RPCs to solicit votes during elections.
