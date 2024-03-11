@@ -1,5 +1,12 @@
 # dslabs-doc
 
+
+## Table of Contents
+- [Overview](#overview)
+- [Coroutines](#coroutines-in-raft)
+- [Events](#events-overview)
+- [RPCs](#rpcs-in-raft)
+
 ## 1. Overview
 
 This README explores the integration of coroutines and RPCs within a Raft consensus algorithm implementation using the labs framework.  Coroutines provide a structured approach to managing asynchronous operations like network communication and leader election, enhancing code readability and maintainability. RPCs form the backbone of communication within the distributed Raft cluster, enabling nodes to send requests and receive responses efficiently. This document outlines how these concepts are leveraged within the labs framework and provides insights into their effective usage for implementing distributed systems
@@ -57,24 +64,45 @@ Coroutine::CreateRun([this](){
 
 - Event system provides a mechanism for coordinating actions or notifications within an application.
 
-### 3.1 SharedIntEvent
+### 3.1 IntEvent
 
-- Represents an event associated with an integer value. It allows components to:
-    - Set the value and trigger notifications
-    - Wait until the value meets specific conditions.
+Blocks the current thread or coroutine until the internal integer value `(value_)` reaches the target value `(target_)` or a specified `timeout` expires.
+
+`IntEvent::Wait()`
+
+- timeout (optional): The maximum time to wait before indicating a timeout.
+- If the event is already triggered, returns immediately.
+- Repeatedly checks if the value has met the target or if a timeout has occurred.
+- Yields the thread/coroutine between checks to prevent busy waiting.
+- If the timeout expires, sets the event's status to `TIMEOUT`.
+
+```
+myEvent->Wait(5000); // Wait up to 5 seconds
+
+if (myEvent->status_ == READY) {
+    // Event triggered 
+} else if (myEvent->status_ == TIMEOUT) {
+    // Timeout occurred
+} 
+
+```
+
+### 3.2 SharedIntEvent
+
+- Manages a shared integer value and provides mechanisms to trigger events when this value changes in specific ways.
 
 - Methods:
     
-    1. Set(const int& v):
-        - Updates the event's internal value.
+    1. `Set(const int& v)`:
+        - Updates the event's internal value (`value_`).
         - Triggers notifications to any components waiting on this event if their conditions are now met.
         - Returns the previous value.
 
-    2. Wait(uint64_t timeout):
-        - The core wait mechanism for an event.
-        - The calling component/coroutine is suspended until the event is considered 'ready' (`ev->Set(1)`) or the timeout expires.
+    2. `Wait(function<bool(int v)> f)`:
+        - If the current `value_` is already greater than or equal to x, returns immediately.
+        - Otherwise, creates a new `IntEvent`, configures it to wait for a condition where the function `f` returns true, and waits on this event.
 
-    3. WaitUntilGreaterOrEqualThan(int x, int timeout):
+    3. `WaitUntilGreaterOrEqualThan(int x, int timeout)`:
         - A component uses this to wait until the event's value is greater than or equal to 'x'.
         - Will wait up to the specified timeout period.
         - Returns `false` if the value meets the condition before the timeout, `true` if a timeout occurs.
@@ -243,3 +271,4 @@ RaftCommo::SendRequestVote(parid_t par_id,
     return ev;
 }
 ```
+
