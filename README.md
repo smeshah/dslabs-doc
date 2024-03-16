@@ -6,6 +6,7 @@
 - [Coroutines](#2-coroutines-in-raft)
 - [Events](#3-events-overview)
 - [RPCs](#4-rpcs-in-raft)
+- [Data Marshalling](#5-data-marshalling-overview)
 
 ## 1 Overview
 
@@ -28,7 +29,7 @@ Coroutines are lightweight functions that allow pausing and resuming execution a
 - Client Interaction: Coroutines can handle incoming client requests, potentially delegating work to other coroutines for log updates and waiting for responses.
 
 
-```
+```cpp
 // Coroutine for Leader Election
 Coroutine::CreateRun([this](){
   while (true){
@@ -76,7 +77,7 @@ Blocks the current thread or coroutine until the internal integer value `(value_
 - Yields the thread/coroutine between checks to prevent busy waiting.
 - If the timeout expires, sets the event's status to `TIMEOUT`.
 
-```
+```cpp
 myEvent->Wait(5000); // Wait up to 5 seconds
 
 if (myEvent->status_ == READY) {
@@ -137,12 +138,12 @@ Improves efficiency by allowing the sender to continue other tasks while waiting
 - A regular "Event" object (or a similar mechanism) is likely associated with each RPC.
 - When a response arrives, it triggers a callback function or signals the event to notify the sender.
 
-```
+```cpp
 Coroutine::CreateRun([this]() {
     std::vector<shared_ptr<IntEvent>> pending_events;
 
     for (int server_id = 0; server_id < NSERVERS; server_id++) {
-        pending_events.push_back(commo()->SendString(0, server_id, "hello", nullptr));
+        pending_events.push_back(commo()->SendString(0, server_id, "hello"));
     }
 
     while (!pending_events.empty()) {
@@ -177,7 +178,7 @@ Optimized for scenarios requiring coordination based on responses from multiple 
 
 `server.cc`
 
-```
+```cpp
 Coroutine::CreateRun([this](){
 
     while(true){
@@ -203,7 +204,7 @@ Coroutine::CreateRun([this](){
 
 `commo.h`
 
-```
+```cpp
 class Reply{
     public:
         uint64_t ret;
@@ -234,7 +235,7 @@ public:
 
 `commo.cc`
 
-```
+```cpp
 shared_ptr<ReplyQuorumEvent> 
 RaftCommo::SendRequestVote(parid_t par_id,
                             siteid_t site_id,
@@ -271,4 +272,79 @@ RaftCommo::SendRequestVote(parid_t par_id,
     return ev;
 }
 ```
+
+## 5 Data Marshalling Overview
+
+### 5.1 Marshallable Data
+
+Data marshalling is a critical process in data communication, involving the conversion of objects or data structures into a format suitable for storage or transmission over a network or communication channel. It ensures that data can be shared between different components or systems with potentially differing internal representations.
+
+#### Key Concepts:
+
+- **Marshalling**: The act of converting an object or data structure into a transmission-friendly format.
+- **Unmarshalling**: The reverse operation, where transmitted data is reconstructed back into its original object or data structure form.
+
+### 5.2 MarshallDeputy Class
+
+The `MarshallDeputy` class serves as a specialized wrapper for `Marshallable` objects, aimed at streamlining the serialization and deserialization process, particularly in the context of Remote Procedure Calls (RPCs). It ensures that `Marshallable` data is properly prepared for the transmission involved in the RPC process.
+
+### 5.3 Implementation Details
+
+Below are implementation insights into how `Marshallable` objects and the `MarshallDeputy` class can be utilized in the context of RPCs:
+
+#### Defining a Marshallable Object (`server.h`)
+
+```cpp
+class MyObject : public Marshallable {
+public:
+    MyObject() : Marshallable(MarshallDeputy::OBJ_TYPE) {}
+
+    uint64_t arg1;
+    std::vector<uint64_t> arg2;
+
+    Marshal& ToMarshal(Marshal& m) const override {
+        m << arg1;
+        m << arg2;
+        return m;
+    }
+
+    Marshal& FromMarshal(Marshal& m) override {
+        m >> arg1;
+        m >> arg2;
+        return m;
+    }
+};
+```
+
+#### Marshalling the Object for Transmission (`server.cc`)
+
+```cpp
+auto obj = std::make_shared<MyObject>();
+obj->arg1 = arg1;
+obj->arg2 = arg2;
+
+std::shared_ptr<Marshallable> marshallableObject = obj;
+
+```
+
+#### Unmarshalling the Object (`server.cc`)
+
+```cpp
+auto obj = std::dynamic_pointer_cast<MyObject>(marshallableObject);
+arg1 = obj->arg1;
+arg2 = obj->arg2;
+```
+
+#### Wrapping `Marshallable` into `MarshallDeputy` for RPC (`commo.cc`)
+
+```cpp
+MarshallDeputy md(marshallableObject);
+```
+### Converting `MarshallDeputy` back to `Marshallable` (`service.cc`)
+
+```cpp
+std::shared_ptr<Marshallable> cmd = const_cast<MarshallDeputy&>(md_cmp).sp_data_;
+```
+
+
 
